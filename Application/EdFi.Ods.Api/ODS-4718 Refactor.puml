@@ -1,0 +1,137 @@
+@startuml
+
+interface IOdsDatabaseConnectionStringProvider
+interface IEdFiOdsInstanceIdentificationProvider
+interface IConfiguration
+interface IDatabaseNameReplacementTokenProvider
+'interface IServerNameReplacementTokenProvider
+interface IInstanceIdentificationContextProvider
+interface IDatabaseServerMetadataProvider
+interface IIdentificationContext
+interface IInstanceIdContextProvider
+interface ISchoolYearContextProvider
+interface IDatabaseServerNameProvider
+
+
+' classes
+class InstanceIdYearIdentificationContext {
+    -int? SchoolYear
+    -string InstanceId
+    +string DatabaseTokenName
+    +string ServerName
+}
+'
+'
+class SchoolYearIdentificationContext {
+    -int? SchoolYear
+    +string DatabaseTokenName
+    +string ServerName
+}
+
+class SchoolYearIdentificationProvider {
+    SchoolYearIdentificationContext GetInstanceIdentifierContext<SchoolYearIdentificationContext>()
+}
+
+class InstanceIdYearIdentificationProvider {
+    InstanceIdYearContext GetInstanceIdentifierContext<InstanceIdYearIdentificationContext>()
+}
+
+
+' interface methods
+IOdsDatabaseConnectionStringProvider : string GetConnectionString()
+IEdFiOdsInstanceIdentificationProvider : int GetInstanceIdentification()
+IDatabaseNameReplacementTokenProvider : string GetReplacementToken()
+IInstanceIdentificationContextProvider : IIdentificationContext GetInstanceIdentifierContext()
+IIdentificationContext : string DatabaseTokenName
+IIdentificationContext : string ServerName
+IDatabaseServerMetadataProvider : T GetServerMetadata<T>()
+ISchoolYearContextProvider : int GetSchoolYear()
+IInstanceIdContextProvider : int GetInstanceId()
+'IDatabaseNameProvider : string CreateDatabaseName()
+IDatabaseServerNameProvider : string GetDatabaseServerName()
+
+IConfiguration : string GetConnectionString(string name)
+
+' class methods
+EdFiOdsInstanceIdentificationProvider : string GetConnectionString()
+EdFiOdsInstanceIdentificationProvider : int GetInstanceIdentification()
+PrototypeTokenReplacementConnectionStringProvider : string GetConnectionString();
+
+PrototypeTokenReplacementConnectionStringProvider : renamed PrototypeWithDatabaseNameTokenReplacementConnectionStringProvider
+' relationships
+
+IIdentificationContext <|.. InstanceIdYearIdentificationContext
+IIdentificationContext <|.. SchoolYearIdentificationContext
+IOdsDatabaseConnectionStringProvider <|.. PrototypeTokenReplacementConnectionStringProvider
+IOdsDatabaseConnectionStringProvider <.. EdFiOdsInstanceIdentificationProvider
+'OdsDatabaseConnectionStringProvider ..> IEdFiOdsInstanceIdentificationProvider
+
+IEdFiOdsInstanceIdentificationProvider <|.. EdFiOdsInstanceIdentificationProvider
+
+PrototypeTokenReplacementConnectionStringProvider ..> IConfiguration
+PrototypeTokenReplacementConnectionStringProvider ..> IInstanceIdentificationContextProvider
+'EdFiOdsInstanceIdentificationProvider ..> IServerNameReplacementTokenProvider
+'EdFiOdsInstanceIdentificationProvider ..> IDatabaseNameReplacementTokenProvider
+
+'IInstanceIdentificationContextProvider <|... DistrictInstanceIdentificationProvider
+IInstanceIdentificationContextProvider <|... InstanceIdYearSpecificIdentificationContextProvider
+'IInstanceIdentificationContextProvider <|... SandboxIdentificationProvider
+'IInstanceIdentificationContextProvider <|... SharedInstanceIdentificationProvider
+IInstanceIdentificationContextProvider <|... SchoolYearIdentificationContextProvider
+
+SchoolYearIdentificationContextProvider ..> IDatabaseServerMetadataProvider : future
+SchoolYearIdentificationContextProvider ..> IDatabaseNameReplacementTokenProvider
+SchoolYearIdentificationContextProvider ..> IDatabaseServerNameProvider
+
+'DistrictInstanceIdentificationProvider ..> IDatabaseServerMetadataProvider : future
+InstanceIdYearSpecificIdentificationContextProvider ..> IDatabaseServerMetadataProvider : future
+InstanceIdYearSpecificIdentificationContextProvider ..> IDatabaseNameReplacementTokenProvider
+InstanceIdYearSpecificIdentificationContextProvider ..> IDatabaseServerNameProvider
+
+'SandboxIdentificationProvider ..> IDatabaseServerMetadataProvider : future
+'DistrictSpecificServerNameReplacementTokenProvider ..> IDatabaseServerMetadataProvider : future
+'InstanceYearSpecificServerNameReplacementTokenProvider ..> IDatabaseServerMetadataProvider : future
+'SandboxServerNameReplacementTokenProvider ..> IDatabaseServerMetadataProvider : future
+'YearSpecificServerNameReplacementTokenProvider ..> IDatabaseServerMetadataProvider : future
+
+'ConventionServerMetadataProvider <|.. IDatabaseServerMetadataProvider
+'ConventionServerMetadataProvider ..> IConfiguration
+'AdminDatabaseConnectionStringProvider ..> IConfiguration
+'InstanceAdminDatabaseNameTokenReplacementConnectionStringProvider ..> IConfiguration
+'InstanceSecurityDatabaseNameTokenReplacementConnectionStringProvider ..> IConfiguration
+
+together {
+'    IDatabaseNameReplacementTokenProvider <|.. DistrictSpecificDatabaseNameReplacementTokenProvider
+'    IDatabaseNameReplacementTokenProvider <|.. InstanceYearSpecificDatabaseNameReplacementTokenProvider
+'    IDatabaseNameReplacementTokenProvider <|.. SandboxDatabaseNameReplacementTokenProvider
+'    IDatabaseNameReplacementTokenProvider <|.. SharedInstanceDatabaseNameReplacementTokenProvider
+'    IDatabaseNameReplacementTokenProvider <|.. YearSpecificDatabaseNameReplacementTokenProvider
+}
+
+together {
+'    IServerNameReplacementTokenProvider <|.. DistrictSpecificServerNameReplacementTokenProvider
+'    IServerNameReplacementTokenProvider <|.. InstanceYearSpecificServerNameReplacementTokenProvider
+'    IServerNameReplacementTokenProvider <|.. SandboxServerNameReplacementTokenProvider
+'    IServerNameReplacementTokenProvider <|.. SharedInstanceServerNameReplacementTokenProvider
+'    IServerNameReplacementTokenProvider <|.. YearSpecificServerNameReplacementTokenProvider
+}
+
+'DistrictInstanceIdentificationProvider ..> IDatabaseNameReplacementTokenProvider
+'DistrictInstanceIdentificationProvider ..> IServerNameReplacementTokenProvider
+
+SchoolYearIdentificationContextProvider ..> ISchoolYearContextProvider
+InstanceIdYearSpecificIdentificationContextProvider ..> ISchoolYearContextProvider
+InstanceIdYearSpecificIdentificationContextProvider ..> IInstanceIdContextProvider
+
+'SandboxIdentificationProvider ..> IDatabaseNameReplacementTokenProvider
+'SandboxIdentificationProvider ..> IServerNameReplacementTokenProvider
+'
+'SharedInstanceIdentificationProvider ..> IDatabaseNameReplacementTokenProvider
+'SharedInstanceIdentificationProvider ..> IServerNameReplacementTokenProvider
+'
+'SchoolYearIdentificationProvider ..> IDatabaseNameReplacementTokenProvider
+'SchoolYearIdentificationProvider ..> IServerNameReplacementTokenProvider
+
+' note
+'OdsDatabaseConnectionStringProvider : renamed from PrototypeTokenReplacementConnectionStringProvider
+@enduml

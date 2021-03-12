@@ -1,0 +1,58 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+
+interface IOdsDatabaseConnectionStringProvider
+'interface IEdFiOdsInstanceIdentificationProvider
+interface  IDbConnectionStringBuilderAdapterFactory #gainsboro
+interface IDatabaseConnectionStringProvider
+interface IConfigConnectionStringsProvider #gainsboro
+interface IDatabaseNameReplacementTokenProvider
+
+' classes
+class PrototypeWithDatabaseNameTokenReplacementConnectionStringProvider
+class OdsDatabaseConnectionStringProvider #gainsboro
+class DbConnectionStringBuilderAdapterFactory #gainsboro
+class ConfigConnectionStringsProvider #gainsboro
+
+' inteface methods
+IConfigConnectionStringsProvider : string GetConnectionString(string name)
+IDbConnectionStringBuilderAdapterFactory : IDbConnectionStringBuilderAdapter Get()
+IOdsDatabaseConnectionStringProvider : string GetConnectionString()
+IDatabaseConnectionStringProvider : string GetConnectionString(string name)
+IDatabaseNameReplacementTokenProvider : string GetReplacementToken()
+
+' class methods
+ConfigConnectionStringsProvider : string GetConnectionString(string name)
+DbConnectionStringBuilderAdapterFactory : IDbConnectionStringBuilderAdapter Get()
+'DistrictSpecificDatabaseNameReplacementTokenProvider : string GetReplacementToken()
+'InstanceYearSpecificDatabaseNameReplacementTokenProvider : string GetReplacementToken()
+'SandboxDatabaseNameReplacementTokenProvider : string GetReplacementToken()
+'SharedInstanceDatabaseNameReplacementTokenProvider : string GetReplacementToken()
+YearSpecificDatabaseNameReplacementTokenProvider : string GetReplacementToken()
+PrototypeWithDatabaseNameTokenReplacementConnectionStringProvider : string GetConnectionString();
+OdsDatabaseConnectionStringProvider : string GetConnectionString();
+
+
+' relationships
+IOdsDatabaseConnectionStringProvider <|.. OdsDatabaseConnectionStringProvider #blue : remove
+IDatabaseConnectionStringProvider <|.. IOdsDatabaseConnectionStringProvider
+
+IOdsDatabaseConnectionStringProvider <|.. PrototypeWithDatabaseNameTokenReplacementConnectionStringProvider
+
+PrototypeWithDatabaseNameTokenReplacementConnectionStringProvider ..> IConfigConnectionStringsProvider #blue : remove
+PrototypeWithDatabaseNameTokenReplacementConnectionStringProvider ..> IDatabaseNameReplacementTokenProvider
+PrototypeWithDatabaseNameTokenReplacementConnectionStringProvider ..> IDbConnectionStringBuilderAdapterFactory #blue : remove
+PrototypeWithDatabaseNameTokenReplacementConnectionStringProvider ..> connectionStringName #blue : remove
+
+IConfigConnectionStringsProvider <|.. ConfigConnectionStringsProvider
+IDbConnectionStringBuilderAdapterFactory <|.. DbConnectionStringBuilderAdapterFactory
+
+'IDatabaseNameReplacementTokenProvider <|... DistrictSpecificDatabaseNameReplacementTokenProvider
+'IDatabaseNameReplacementTokenProvider <|... InstanceYearSpecificDatabaseNameReplacementTokenProvider
+'IDatabaseNameReplacementTokenProvider <|... SandboxDatabaseNameReplacementTokenProvider
+'IDatabaseNameReplacementTokenProvider <|... SharedInstanceDatabaseNameReplacementTokenProvider
+IDatabaseNameReplacementTokenProvider <|... YearSpecificDatabaseNameReplacementTokenProvider
+
+
+@enduml

@@ -1,0 +1,73 @@
+@startuml
+@startuml
+
+interface IOdsDatabaseConnectionStringProvider
+interface IConfiguration
+interface IDatabaseNameReplacementTokenProvider
+interface ISchoolYearContextProvider
+
+'interface IDatabaseServerMetadataProvider #azure
+'class CustomDatabaseServerMetadataProvider #azure
+
+interface IDatabaseServerNameProvider #ccfff5
+class YearSpecificDatabaseServerNameProvider #ccfff5
+
+' interface methods
+IOdsDatabaseConnectionStringProvider : string GetConnectionString()
+IDatabaseNameReplacementTokenProvider : string GetReplacementToken()
+'IDatabaseServerMetadataProvider : T GetServerMetadata<T>()
+IDatabaseServerNameProvider : string GetDatabaseServerName()
+
+IConfiguration : string GetConnectionString(string name)
+IConfiguration : T GetValue<T>(string name)
+ISchoolYearContextProvider : int GetSchoolYear()
+
+' class methods
+PrototypeTokenReplacementConnectionStringProvider : string GetConnectionString()
+YearSpecificDatabaseNameReplacementTokenProvider : string GetReplacementToken()
+YearSpecificDatabaseServerNameProvider : string GetDatabaseServerName()
+'CustomDatabaseServerMetadataProvider : string GetServerMetadata<string>()
+
+
+PrototypeTokenReplacementConnectionStringProvider : renamed PrototypeWithDatabaseNameTokenReplacementConnectionStringProvider
+' relationships
+
+IOdsDatabaseConnectionStringProvider <|.. PrototypeTokenReplacementConnectionStringProvider
+
+PrototypeTokenReplacementConnectionStringProvider ....> IConfiguration
+
+'PrototypeTokenReplacementConnectionStringProvider ..> IDatabaseServerMetadataProvider : future
+PrototypeTokenReplacementConnectionStringProvider ..> IDatabaseNameReplacementTokenProvider
+PrototypeTokenReplacementConnectionStringProvider ..> IDatabaseServerNameProvider
+
+
+'IDatabaseServerMetadataProvider <|.. AdminDatabaseConfigurationDatabaseServerMetadataProvider
+
+
+
+IDatabaseNameReplacementTokenProvider <|.. YearSpecificDatabaseNameReplacementTokenProvider
+YearSpecificDatabaseNameReplacementTokenProvider ..> ISchoolYearContextProvider
+YearSpecificDatabaseServerNameProvider ..> IConfiguration
+YearSpecificDatabaseServerNameProvider ..> ISchoolYearContextProvider
+IDatabaseServerNameProvider <|.. YearSpecificDatabaseServerNameProvider
+
+
+
+'IDatabaseServerMetadataProvider <|.. CustomDatabaseServerMetadataProvider
+YearSpecificDatabaseServerNameProvider ..> IDatabaseServerMetadataProvider #blue : future
+
+'note right of CustomDatabaseServerMetadataProvider
+'     The spike has a DockerDatabaseServerMetadataProvider
+'     for the demonstration only. We will need to vet out
+'     the structure etc. Another option is to use an
+'     Admin Database solution.
+'end note
+'
+'note right of IDatabaseServerMetadataProvider
+'    This Interface could be introduced in the future
+'    to address the need to allow for even more
+'    customization for mapping of the database servers.
+'end note
+@enduml
+
+@enduml
