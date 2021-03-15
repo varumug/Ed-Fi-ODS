@@ -50,6 +50,8 @@ namespace EdFi.Ods.Common.Configuration
 
         public string PathBase { get; set; }
 
+        public string DefaultDatabaseServerName { get; set; }
+
         public DatabaseEngine GetDatabaseEngine() => _databaseEngine.Value;
 
         public ApiMode GetApiMode() => _apiMode.Value;

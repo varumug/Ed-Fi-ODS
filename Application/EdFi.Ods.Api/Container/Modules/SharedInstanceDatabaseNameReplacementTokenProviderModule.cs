@@ -20,6 +20,10 @@ namespace EdFi.Ods.Api.Container.Modules
 
         public override void ApplyConfigurationSpecificRegistrations(ContainerBuilder builder)
         {
+            builder.RegisterType<DefaultDatabaseServerNameProvider>()
+                .As<IDatabaseServerNameProvider>()
+                .SingleInstance();
+
             builder.RegisterType<SharedInstanceDatabaseNameReplacementTokenProvider>()
                 .As<IDatabaseNameReplacementTokenProvider>()
                 .SingleInstance();

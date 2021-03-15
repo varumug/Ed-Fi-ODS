@@ -24,6 +24,7 @@ using EdFi.Ods.Common;
 using EdFi.Ods.Common.Configuration;
 using EdFi.Ods.Common.Context;
 using EdFi.Ods.Common.Conventions;
+using EdFi.Ods.Common.Database;
 using EdFi.Ods.Common.Infrastructure.Extensibility;
 using EdFi.Ods.Common.Infrastructure.Pipelines;
 using EdFi.Ods.Common.IO;
@@ -49,6 +50,10 @@ namespace EdFi.Ods.Api.Container.Modules
         protected override void Load(ContainerBuilder builder)
         {
             RegisterMiddleware();
+
+            builder.RegisterType<DefaultDatabaseServerNameProvider>()
+                .As<IDatabaseServerNameProvider>()
+                .SingleInstance();
 
             builder.RegisterType<ExceptionHandlingFilter>()
                 .As<IFilterMetadata>()
