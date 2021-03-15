@@ -20,10 +20,10 @@ namespace EdFi.Ods.Api.Container.Modules
 
         public override void ApplyConfigurationSpecificRegistrations(ContainerBuilder builder)
         {
-            if (!string.IsNullOrEmpty(ApiSettings.DefaultDatabaseServerName) ||
-                !string.IsNullOrWhiteSpace(ApiSettings.DefaultDatabaseServerName))
+            if (!string.IsNullOrEmpty(ApiSettings.DatabaseServerNameTemplate) ||
+                !string.IsNullOrWhiteSpace(ApiSettings.DatabaseServerNameTemplate))
             {
-                builder.RegisterType<ConventionSpecificDatabaseServerNameProvider>()
+                builder.RegisterType<YearSpecificDatabaseServerNameProvider>()
                     .As<IDatabaseServerNameProvider>()
                     .SingleInstance();
             }

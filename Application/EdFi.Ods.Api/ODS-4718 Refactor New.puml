@@ -10,7 +10,7 @@ interface ISchoolYearContextProvider
 'class CustomDatabaseServerMetadataProvider #azure
 
 interface IDatabaseServerNameProvider #ccfff5
-class YearSpecificDatabaseServerNameProvider #ccfff5
+class ConventionBaseDatabaseServerNameProvider #ccfff5
 
 ' interface methods
 IOdsDatabaseConnectionStringProvider : string GetConnectionString()
@@ -25,7 +25,7 @@ ISchoolYearContextProvider : int GetSchoolYear()
 ' class methods
 PrototypeTokenReplacementConnectionStringProvider : string GetConnectionString()
 YearSpecificDatabaseNameReplacementTokenProvider : string GetReplacementToken()
-YearSpecificDatabaseServerNameProvider : string GetDatabaseServerName()
+ConventionBaseDatabaseServerNameProvider : string GetDatabaseServerName()
 'CustomDatabaseServerMetadataProvider : string GetServerMetadata<string>()
 
 
@@ -47,14 +47,13 @@ PrototypeTokenReplacementConnectionStringProvider ..> IDatabaseServerNameProvide
 
 IDatabaseNameReplacementTokenProvider <|.. YearSpecificDatabaseNameReplacementTokenProvider
 YearSpecificDatabaseNameReplacementTokenProvider ..> ISchoolYearContextProvider
-YearSpecificDatabaseServerNameProvider ..> IConfiguration
-YearSpecificDatabaseServerNameProvider ..> ISchoolYearContextProvider
-IDatabaseServerNameProvider <|.. YearSpecificDatabaseServerNameProvider
+ConventionBaseDatabaseServerNameProvider ..> IConfiguration
+ConventionBaseDatabaseServerNameProvider ..> ISchoolYearContextProvider
+IDatabaseServerNameProvider <|.. ConventionBaseDatabaseServerNameProvider
 
 
 
 'IDatabaseServerMetadataProvider <|.. CustomDatabaseServerMetadataProvider
-YearSpecificDatabaseServerNameProvider ..> IDatabaseServerMetadataProvider #blue : future
 
 'note right of CustomDatabaseServerMetadataProvider
 '     The spike has a DockerDatabaseServerMetadataProvider

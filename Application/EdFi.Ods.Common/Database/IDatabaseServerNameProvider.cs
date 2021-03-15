@@ -19,17 +19,17 @@ namespace EdFi.Ods.Common.Database
         public string GetDatabaseServerName() => null;
     }
 
-    public class ConventionSpecificDatabaseServerNameProvider : IDatabaseServerNameProvider
+    public class YearSpecificDatabaseServerNameProvider : IDatabaseServerNameProvider
     {
         private readonly ISchoolYearContextProvider _schoolYearContextProvider;
         private readonly ApiSettings _apiSettings;
 
-        public ConventionSpecificDatabaseServerNameProvider(ISchoolYearContextProvider schoolYearContextProvider, ApiSettings apiSettings)
+        public YearSpecificDatabaseServerNameProvider(ISchoolYearContextProvider schoolYearContextProvider, ApiSettings apiSettings)
         {
             _schoolYearContextProvider = schoolYearContextProvider;
             _apiSettings = apiSettings;
         }
 
-        public string GetDatabaseServerName() => $"{_apiSettings.DefaultDatabaseServerName}_{_schoolYearContextProvider.GetSchoolYear()}";
+        public string GetDatabaseServerName() => string.Format(_apiSettings.DatabaseServerNameTemplate, _schoolYearContextProvider.GetSchoolYear());
     }
 }
