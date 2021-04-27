@@ -24,6 +24,7 @@ namespace EdFi.Ods.CodeGen.Tests.UnitTests.Providers
             protected override void Arrange()
             {
                 _codeRepositoryProvider = Stub<ICodeRepositoryProvider>();
+                _includeExtensionsProvider = Stub<IIncludePluginsProvider>();
                 var codeRepositoryHelper = new CodeRepositoryHelper(TestContext.CurrentContext.TestDirectory);
 
                 A.CallTo(() => _codeRepositoryProvider.GetCodeRepositoryByName(A<string>._))
