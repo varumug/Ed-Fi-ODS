@@ -57,22 +57,33 @@ namespace EdFi.Ods.Api.IntegrationTests
             return builder;
         }
 
-        public EducationOrganizationTestDataBuilder AddStaffEducationOrganizationEmploymentAssociation(int schoolId, int staffUSI, DateTime date)
+        public EducationOrganizationTestDataBuilder AddStaffEducationOrganizationEmploymentAssociation(int schoolId, int staffUSI, DateTime? entryDate = null)
         {
+
+            if (!entryDate.HasValue)
+            {
+                entryDate = DateTime.UtcNow.Date;
+            }
+
             _sql.AppendLine($@"INSERT INTO edfi.StaffEducationOrganizationEmploymentAssociation (EducationOrganizationId, StaffUSI, EmploymentStatusDescriptorId, HireDate)
-                                VALUES ({schoolId}, {staffUSI}, {TestEmploymentStatusDescriptorId}, '{ date }');"
+                                VALUES ({schoolId}, {staffUSI}, {TestEmploymentStatusDescriptorId}, '{ entryDate }');"
 
             );
 
             return this;
         }
 
-        public EducationOrganizationTestDataBuilder AddStaffEducationOrganizationAssignmentAssociation(int schoolId, int staffUSI, DateTime date)
+        public EducationOrganizationTestDataBuilder AddStaffEducationOrganizationAssignmentAssociation(int schoolId, int staffUSI, DateTime? entryDate = null)
         {
+
+            if (!entryDate.HasValue)
+            {
+                entryDate = DateTime.UtcNow.Date;
+            }
 
             _sql.AppendLine(
                 $@"INSERT INTO edfi.StaffEducationOrganizationAssignmentAssociation (EducationOrganizationId, StaffUSI, StaffClassificationDescriptorId, BeginDate)
-                   VALUES ({schoolId}, {staffUSI}, {TestStaffClassificationDescriptorId}, '{ date }');"
+                   VALUES ({schoolId}, {staffUSI}, {TestStaffClassificationDescriptorId}, '{ entryDate }');"
             );
          
             return this;
