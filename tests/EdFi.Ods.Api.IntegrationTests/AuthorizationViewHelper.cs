@@ -36,6 +36,11 @@ namespace EdFi.Ods.Api.IntegrationTests
             return GetPersonUsi(connection, PersonType.Student, studentUniqueId);
         }
 
+        public static int GetStaffUsi(IDbConnection connection, string staffUniqueId)
+        {
+            return GetPersonUsi(connection, PersonType.Staff, staffUniqueId);
+        }
+
         public static int GetParentUsi(IDbConnection connection, string parentUniqueId)
         {
             return GetPersonUsi(connection, PersonType.Parent, parentUniqueId);

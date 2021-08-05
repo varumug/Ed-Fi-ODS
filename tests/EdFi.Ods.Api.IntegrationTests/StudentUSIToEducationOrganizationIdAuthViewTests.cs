@@ -170,8 +170,7 @@ namespace EdFi.Ods.Api.IntegrationTests
         }
 
         [Test]
-        public void
-            When_student_is_enrolled_in_school_that_belongs_to_a_district_should_not_have_access_from_another_school_or_district()
+        public void When_student_is_enrolled_in_school_that_belongs_to_a_district_should_not_have_access_from_another_school_or_district()
         {
             var studentUniqueId = Guid.NewGuid().ToString("N");
 
