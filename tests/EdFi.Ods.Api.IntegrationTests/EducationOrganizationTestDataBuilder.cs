@@ -60,7 +60,7 @@ namespace EdFi.Ods.Api.IntegrationTests
         public EducationOrganizationTestDataBuilder AddStaffEducationOrganizationEmploymentAssociation(int schoolId, int staffUSI, DateTime date)
         {
             _sql.AppendLine($@"INSERT INTO edfi.StaffEducationOrganizationEmploymentAssociation (EducationOrganizationId, StaffUSI, EmploymentStatusDescriptorId, HireDate)
-                                VALUES ({schoolId}, StaffUSI, {TestEmploymentStatusDescriptorId}, '{ date }');"
+                                VALUES ({schoolId}, {staffUSI}, {TestEmploymentStatusDescriptorId}, '{ date }');"
 
             );
 
