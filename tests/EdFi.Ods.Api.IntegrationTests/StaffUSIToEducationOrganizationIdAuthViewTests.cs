@@ -52,7 +52,7 @@ namespace EdFi.Ods.Api.IntegrationTests
         }
 
         [Test]
-        public void When_staff_is_employed_and_assigned_to_same_school_view_should_not_return_duplicate_records_from_those_schools()
+        public void When_staff_is_employed_and_assigned_to_same_school_view_should_not_return_duplicate_records_from_the_school()
         {
             var staffUniqueId = Guid.NewGuid().ToString("N");
 
