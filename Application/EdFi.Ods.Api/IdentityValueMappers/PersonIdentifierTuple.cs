@@ -10,7 +10,7 @@ namespace EdFi.Ods.Api.IdentityValueMappers
     /// <summary>
     /// Holds values of the various identifiers used to identify a person.
     /// </summary>
-    public class PersonIdentifiersValueMap
+    public class PersonIdentifierTuple
     {
         /// <summary>
         /// An ODS-specific surrogate identifier for a specific representation of

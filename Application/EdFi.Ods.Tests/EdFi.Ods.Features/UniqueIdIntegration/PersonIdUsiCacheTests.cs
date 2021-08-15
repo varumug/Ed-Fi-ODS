@@ -34,8 +34,8 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
             When_getting_usi_and_id_for_non_cached_unique_id_and_both_values_are_returned_by_usi_value_mapper : TestFixtureBase
         {
             // Supplied values
-            private PersonIdentifiersValueMap _suppliedUsiValueMap;
-            private List<PersonIdentifiersValueMap> _suppliedPersonIdentifiers;
+            private PersonIdentifierTuple _suppliedUsiValueMap;
+            private List<PersonIdentifierTuple> _suppliedPersonIdentifiers;
 
             // Actual values
             private int _actualUsiFromValueMapper;
@@ -58,7 +58,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _usiValueMapper = Stub<IUniqueIdToUsiValueMapper>();
                 _personIdentifiersProvider = Stub<IPersonIdentifiersProvider>();
 
-                _suppliedUsiValueMap = new PersonIdentifiersValueMap
+                _suppliedUsiValueMap = new PersonIdentifierTuple
                 {
                     UniqueId = Guid.NewGuid()
                         .ToString(),
@@ -68,16 +68,16 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                     Id = Guid.NewGuid()
                 };
 
-                _suppliedPersonIdentifiers = new List<PersonIdentifiersValueMap>
+                _suppliedPersonIdentifiers = new List<PersonIdentifierTuple>
                 {
-                    new PersonIdentifiersValueMap
+                    new PersonIdentifierTuple
                     {
                         UniqueId = Guid.NewGuid()
                             .ToString(),
                         Usi = 100,
                         Id = Guid.NewGuid()
                     },
-                    new PersonIdentifiersValueMap
+                    new PersonIdentifierTuple
                     {
                         UniqueId = Guid.NewGuid()
                             .ToString(),
@@ -87,13 +87,13 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 };
 
                 A.CallTo(() => _idValueMapper.GetId(A<string>._, A<string>._))
-                    .Returns(new PersonIdentifiersValueMap());
+                    .Returns(new PersonIdentifierTuple());
 
                 A.CallTo(() => _usiValueMapper.GetUsi(A<string>._, A<string>._))
                     .Returns(_suppliedUsiValueMap);
 
                 A.CallTo(() => _personIdentifiersProvider.GetAllPersonIdentifiers(A<string>._))
-                    .Returns(Task.Run(() => (IEnumerable<PersonIdentifiersValueMap>) _suppliedPersonIdentifiers));
+                    .Returns(Task.Run(() => (IList<PersonIdentifierTuple>) _suppliedPersonIdentifiers));
 
                 SetupCaching();
 
@@ -163,8 +163,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
             : TestFixtureBase
         {
             // Supplied values
-            private PersonIdentifiersValueMap _suppliedUsiValueMap;
-            private PersonIdentifiersValueMap _suppliedIdValueMap;
+            private PersonIdentifierTuple _suppliedIdTuple;
 
             // Actual values
             private readonly List<int> _actualUSIs = new List<int>();
@@ -175,10 +174,11 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
             private IUniqueIdToIdValueMapper _idValueMapper;
             private IPersonIdentifiersProvider _personIdentifiersProvider;
             private IEdFiOdsInstanceIdentificationProvider _edfiOdsInstanceIdentificationProvider;
-            private PersonIdentifiersValueMap _suppliedPersonIdentifiersValueMap;
+            private PersonIdentifierTuple _suppliedPersonIdentifierTuple;
             private MemoryCacheProvider _memoryCacheProvider;
             private PersonUniqueIdToIdCache _idCache;
             private PersonUniqueIdToUsiCache _usiCache;
+            private string _suppliedUniqueId;
 
             protected override void Arrange()
             {
@@ -188,28 +188,23 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _personIdentifiersProvider = Stub<IPersonIdentifiersProvider>();
 
                 // usi value mapper
-                _suppliedUsiValueMap = new PersonIdentifiersValueMap
-                {
-                    UniqueId = Guid.NewGuid()
-                        .ToString(),
-                    Usi = 10
-                };
+                _suppliedUniqueId = Guid.NewGuid().ToString();
 
-                A.CallTo(() => _usiValueMapper.GetUsi(A<string>._, A<string>._)).Returns(_suppliedIdValueMap);
+                A.CallTo(() => _usiValueMapper.GetUsi(A<string>._, A<string>._)).Returns(_suppliedIdTuple);
 
                 // id value mapper
-                _suppliedIdValueMap = new PersonIdentifiersValueMap
+                _suppliedIdTuple = new PersonIdentifierTuple
                 {
-                    UniqueId = _suppliedUsiValueMap.UniqueId, // Same uniqueId
+                    UniqueId = _suppliedUniqueId, // Same uniqueId
                     Id = Guid.NewGuid()
                 };
 
-                A.CallTo(() => _idValueMapper.GetId(A<string>._, A<string>._)).Returns(_suppliedIdValueMap);
+                A.CallTo(() => _idValueMapper.GetId(A<string>._, A<string>._)).Returns(_suppliedIdTuple);
 
                 // person identifiers provider
-                _suppliedPersonIdentifiersValueMap = new PersonIdentifiersValueMap
+                _suppliedPersonIdentifierTuple = new PersonIdentifierTuple
                 {
-                    UniqueId = _suppliedUsiValueMap.UniqueId, // Same uniqueId
+                    UniqueId = _suppliedUniqueId, // Same uniqueId
                     Usi = 100
                 };
 
@@ -221,7 +216,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                             Thread.Sleep(10);
 
                             return
-                                (IEnumerable<PersonIdentifiersValueMap>) new[] {_suppliedPersonIdentifiersValueMap};
+                                (IList<PersonIdentifierTuple>) new[] {_suppliedPersonIdentifierTuple};
                         }
                     ));
 
@@ -247,7 +242,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
 
             protected override void Act()
             {
-                _actualId = _idCache.GetId(Staff, _suppliedUsiValueMap.UniqueId);
+                _actualId = _idCache.GetId(Staff, _suppliedUniqueId);
 
                 // Launch 50 threads to try and obtain the USI
                 object listLock = new object();
@@ -259,7 +254,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                         Task.Run(
                             () =>
                             {
-                                int usi = _usiCache.GetUsi(Staff, _suppliedUsiValueMap.UniqueId);
+                                int usi = _usiCache.GetUsi(Staff, _suppliedUniqueId);
 
                                 lock (listLock)
                                 {
@@ -283,7 +278,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
             {
                 A.CallTo(
                         () => _idValueMapper.GetId(
-                            A<string>.That.IsEqualTo(Staff), A<string>.That.IsEqualTo(_suppliedIdValueMap.UniqueId)))
+                            A<string>.That.IsEqualTo(Staff), A<string>.That.IsEqualTo(_suppliedUniqueId)))
                     .MustHaveHappened();
             }
 
@@ -292,23 +287,23 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
             {
                 A.CallTo(
                         () => _usiValueMapper.GetUsi(
-                            A<string>.That.IsEqualTo(Staff), A<string>.That.IsEqualTo(_suppliedIdValueMap.UniqueId)))
+                            A<string>.That.IsEqualTo(Staff), A<string>.That.IsEqualTo(_suppliedUniqueId)))
                     .MustNotHaveHappened();
             }
 
             [Test]
             public void Should_return_id_value_supplied_by_the_id_value_mapper()
             {
-                _actualId.ShouldBe(_suppliedIdValueMap.Id);
+                _actualId.ShouldBe(_suppliedIdTuple.Id);
             }
 
             [Test]
             public void Should_return_usi_value_supplied_by_person_identifiers_provider()
             {
                 Assert.That(
-                    _actualUSIs.Distinct(),
+                    _actualUSIs.Distinct().ToArray(),
                     Is.EqualTo(
-                        new[] {_suppliedPersonIdentifiersValueMap.Usi}));
+                        new[] {_suppliedPersonIdentifierTuple.Usi}));
             }
         }
 
@@ -317,8 +312,8 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
             : TestFixtureBase
         {
             // Supplied values
-            private PersonIdentifiersValueMap _suppliedUsiValueMap;
-            private PersonIdentifiersValueMap _suppliedIdValueMap;
+            private PersonIdentifierTuple _suppliedUsiValueMap;
+            private PersonIdentifierTuple _suppliedIdValueMap;
 
             // Actual values
             private readonly List<int> _actualUSIs = new List<int>();
@@ -329,7 +324,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
             private IUniqueIdToIdValueMapper _idValueMapper;
             private IPersonIdentifiersProvider _personIdentifiersProvider;
             private IEdFiOdsInstanceIdentificationProvider _edfiOdsInstanceIdentificationProvider;
-            private PersonIdentifiersValueMap _suppliedPersonIdentifiersValueMap;
+            private PersonIdentifierTuple _suppliedPersonIdentifierTuple;
             private MemoryCacheProvider _memoryCacheProvider;
             private PersonUniqueIdToIdCache _idCache;
             private PersonUniqueIdToUsiCache _usiCache;
@@ -342,10 +337,9 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _personIdentifiersProvider = Stub<IPersonIdentifiersProvider>();
 
                 // usi value mapper
-                _suppliedUsiValueMap = new PersonIdentifiersValueMap
+                _suppliedUsiValueMap = new PersonIdentifierTuple
                 {
-                    UniqueId = Guid.NewGuid()
-                        .ToString(),
+                    UniqueId = Guid.NewGuid().ToString(),
                     Usi = 10
                 };
 
@@ -353,7 +347,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                     .Returns(_suppliedUsiValueMap);
 
                 // id value mapper
-                _suppliedIdValueMap = new PersonIdentifiersValueMap
+                _suppliedIdValueMap = new PersonIdentifierTuple
                 {
                     UniqueId = _suppliedUsiValueMap.UniqueId, // Same uniqueId
                     Id = Guid.NewGuid()
@@ -362,10 +356,9 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 A.CallTo(() => _idValueMapper.GetId(A<string>._, A<string>._))
                     .Returns(_suppliedIdValueMap);
 
-                _suppliedPersonIdentifiersValueMap = new PersonIdentifiersValueMap
+                _suppliedPersonIdentifierTuple = new PersonIdentifierTuple
                 {
-                    UniqueId = Guid.NewGuid()
-                        .ToString(),
+                    UniqueId = Guid.NewGuid().ToString(),
                     Usi = 100
                 };
 
@@ -378,7 +371,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                                 Thread.Sleep(10);
 
                                 return
-                                    (IEnumerable<PersonIdentifiersValueMap>) new[] {_suppliedPersonIdentifiersValueMap};
+                                    (IList<PersonIdentifierTuple>) new[] {_suppliedPersonIdentifierTuple};
                             }
                         ));
 
@@ -489,16 +482,16 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _personIdentifiersProvider = Stub<IPersonIdentifiersProvider>();
 
                 A.CallTo(() => _personIdentifiersProvider.GetAllPersonIdentifiers(A<string>._))
-                    .Returns(Task.Run(() => (IEnumerable<PersonIdentifiersValueMap>) new PersonIdentifiersValueMap[0]));
+                    .Returns(Task.Run(() => (IList<PersonIdentifierTuple>) new PersonIdentifierTuple[0]));
 
                 _usiValueMapper = Stub<IUniqueIdToUsiValueMapper>();
 
-                A.CallTo(() => _usiValueMapper.GetUsi(A<string>._, A<string>._)).Returns(new PersonIdentifiersValueMap());
+                A.CallTo(() => _usiValueMapper.GetUsi(A<string>._, A<string>._)).Returns(new PersonIdentifierTuple());
 
                 _idValueMapper = Stub<IUniqueIdToIdValueMapper>();
 
                 A.CallTo(() => _idValueMapper.GetId(A<string>._, A<string>._))
-                    .Returns(new PersonIdentifiersValueMap());
+                    .Returns(new PersonIdentifierTuple());
 
                 var memorycacheoption = A.Fake<IOptions<MemoryCacheOptions>>();
 
@@ -549,17 +542,17 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _personIdentifiersProvider = Stub<IPersonIdentifiersProvider>();
 
                 A.CallTo(() => _personIdentifiersProvider.GetAllPersonIdentifiers(A<string>._))
-                    .Returns(Task.Run(() => (IEnumerable<PersonIdentifiersValueMap>) new PersonIdentifiersValueMap[0]));
+                    .Returns(Task.Run(() => (IList<PersonIdentifierTuple>) new PersonIdentifierTuple[0]));
 
                 _usiValueMapper = Stub<IUniqueIdToUsiValueMapper>();
 
                 A.CallTo(() => _usiValueMapper.GetUsi(A<string>._, A<string>._))
-                    .Returns(new PersonIdentifiersValueMap());
+                    .Returns(new PersonIdentifierTuple());
 
                 _idValueMapper = Stub<IUniqueIdToIdValueMapper>();
 
                 A.CallTo(() => _idValueMapper.GetId(A<string>._, A<string>._))
-                    .Returns(new PersonIdentifiersValueMap());
+                    .Returns(new PersonIdentifierTuple());
 
                 SetupCaching();
 
@@ -597,7 +590,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
             When_getting_usi_for_non_cached_unique_id_unique_id_is_added_to_the_cache_for_subsequent_calls : TestFixtureBase
         {
             // Supplied values
-            private PersonIdentifiersValueMap _suppliedUsiValueMap;
+            private PersonIdentifierTuple _suppliedUsiValueMap;
 
             // Actual values
             private int _actualUsi;
@@ -615,7 +608,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _edfiOdsInstanceIdentificationProvider = Stub<IEdFiOdsInstanceIdentificationProvider>();
                 _usiValueMapper = Stub<IUniqueIdToUsiValueMapper>();
 
-                _suppliedUsiValueMap = new PersonIdentifiersValueMap
+                _suppliedUsiValueMap = new PersonIdentifierTuple
                 {
                     UniqueId = Guid.NewGuid()
                         .ToString(),
@@ -629,7 +622,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _personIdentifiersProvider = Stub<IPersonIdentifiersProvider>();
 
                 A.CallTo(() => _personIdentifiersProvider.GetAllPersonIdentifiers(A<string>._))
-                    .Returns(Task.Run(() => (IEnumerable<PersonIdentifiersValueMap>) new PersonIdentifiersValueMap[0]));
+                    .Returns(Task.Run(() => (IList<PersonIdentifierTuple>) new PersonIdentifierTuple[0]));
 
                 SetupCaching();
 
@@ -689,7 +682,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
             When_getting_unique_id_for_non_cached_unique_id_usi_is_added_to_the_cache_for_subsequent_calls : TestFixtureBase
         {
             // Supplied values
-            private PersonIdentifiersValueMap _suppliedUsiValueMap;
+            private PersonIdentifierTuple _suppliedUsiValueMap;
 
             // Actual values
             private int _actualUsi;
@@ -707,7 +700,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _edfiOdsInstanceIdentificationProvider = Stub<IEdFiOdsInstanceIdentificationProvider>();
                 _usiValueMapper = Stub<IUniqueIdToUsiValueMapper>();
 
-                _suppliedUsiValueMap = new PersonIdentifiersValueMap
+                _suppliedUsiValueMap = new PersonIdentifierTuple
                 {
                     UniqueId = Guid.NewGuid()
                         .ToString(),
@@ -721,7 +714,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _personIdentifiersProvider = Stub<IPersonIdentifiersProvider>();
 
                 A.CallTo(() => _personIdentifiersProvider.GetAllPersonIdentifiers(A<string>._))
-                    .Returns(Task.Run(() => (IEnumerable<PersonIdentifiersValueMap>) new PersonIdentifiersValueMap[0]));
+                    .Returns(Task.Run(() => (IList<PersonIdentifierTuple>) new PersonIdentifierTuple[0]));
 
                 SetupCaching();
 
@@ -811,14 +804,14 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _personIdentifiersProvider = Stub<IPersonIdentifiersProvider>();
 
                 A.CallTo(() => _personIdentifiersProvider.GetAllPersonIdentifiers(A<string>._))
-                    .Returns(Task.Run(() => (IEnumerable<PersonIdentifiersValueMap>) new PersonIdentifiersValueMap[0]));
+                    .Returns(Task.Run(() => (IList<PersonIdentifierTuple>) new PersonIdentifierTuple[0]));
 
                 // USI value mapper gets call twice during Act step, with first value on ODS instance 1, and second on ODS instance 2
                 _usiValueMapper = Stub<IUniqueIdToUsiValueMapper>();
 
                 A.CallTo(() => _usiValueMapper.GetUniqueId(A<string>.That.IsEqualTo(Staff), A<int>.That.IsEqualTo(11)))
                     .Returns(
-                        new PersonIdentifiersValueMap
+                        new PersonIdentifierTuple
                         {
                             UniqueId = "ABC123",
                             Usi = 11
@@ -826,7 +819,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
 
                 A.CallTo(() => _usiValueMapper.GetUniqueId(A<string>.That.IsEqualTo(Staff), A<int>.That.IsEqualTo(11)))
                     .Returns(
-                        new PersonIdentifiersValueMap
+                        new PersonIdentifierTuple
                         {
                             UniqueId = "CDE234",
                             Usi = 11
@@ -903,10 +896,10 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                     .Returns(
                         Task.Run(
                             () =>
-                                (IEnumerable<PersonIdentifiersValueMap>)
+                                (IList<PersonIdentifierTuple>)
                                 new[]
                                 {
-                                    new PersonIdentifiersValueMap
+                                    new PersonIdentifierTuple
                                     {
                                         UniqueId = "ABC123",
                                         Usi = 11
@@ -917,10 +910,10 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                     .Returns(
                         Task.Run(
                             () =>
-                                (IEnumerable<PersonIdentifiersValueMap>)
+                                (IList<PersonIdentifierTuple>)
                                 new[]
                                 {
-                                    new PersonIdentifiersValueMap
+                                    new PersonIdentifierTuple
                                     {
                                         UniqueId = "CDE234",
                                         Usi = 11
@@ -996,7 +989,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
                 _personIdentifiersProvider = Stub<IPersonIdentifiersProvider>();
 
                 A.CallTo(() => _personIdentifiersProvider.GetAllPersonIdentifiers(A<string>._))
-                    .Returns(Task.Run(() => (IEnumerable<PersonIdentifiersValueMap>) new PersonIdentifiersValueMap[0]));
+                    .Returns(Task.Run(() => (IList<PersonIdentifierTuple>) new PersonIdentifierTuple[0]));
 
                 _suppliedIdForUniqueIdABC123 = Guid.NewGuid();
 
@@ -1005,7 +998,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
 
                 A.CallTo(() => _usiValueMapper.GetUsi(A<string>.That.IsEqualTo(Staff), A<string>.That.IsEqualTo("ABC123")))
                     .Returns(
-                        new PersonIdentifiersValueMap
+                        new PersonIdentifierTuple
                         {
                             UniqueId = "ABC123",
                             Usi = 11
@@ -1013,7 +1006,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
 
                 A.CallTo(() => _usiValueMapper.GetUsi(A<string>.That.IsEqualTo(Staff), A<string>.That.IsEqualTo("ABC123")))
                     .Returns(
-                        new PersonIdentifiersValueMap
+                        new PersonIdentifierTuple
                         {
                             UniqueId = "ABC123",
                             Usi = 22
@@ -1023,7 +1016,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
 
                 A.CallTo(() => _idValueMapper.GetId(A<string>.That.IsEqualTo(Staff), A<string>.That.IsEqualTo("ABC123")))
                     .Returns(
-                        new PersonIdentifiersValueMap
+                        new PersonIdentifierTuple
                         {
                             UniqueId = "ABC123",
                             Id = _suppliedIdForUniqueIdABC123
@@ -1116,7 +1109,7 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
 
                 A.CallTo(() => _idValueMapper.GetUniqueId(A<string>.That.IsEqualTo(Staff), A<Guid>.That.IsEqualTo(_suppliedId)))
                     .Returns(
-                        new PersonIdentifiersValueMap
+                        new PersonIdentifierTuple
                         {
                             Id = _suppliedId,
                             UniqueId = "ABC123"

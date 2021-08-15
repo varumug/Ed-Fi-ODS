@@ -18,7 +18,7 @@ namespace EdFi.Ods.Repositories.NHibernate.Tests.Modules
         {
             builder.Register(c => new MemoryCache(new MemoryCacheOptions())).As<IMemoryCache>();
 
-            builder.RegisterType<MemoryCacheProvider>().As<ICacheProvider>();
+            builder.RegisterType<MemoryCacheProvider>().As<ICacheProvider>().SingleInstance();
             builder.RegisterType<ConcurrentDictionaryCacheProvider>().AsSelf().SingleInstance();
 
             builder.RegisterType<DescriptorsCache>()

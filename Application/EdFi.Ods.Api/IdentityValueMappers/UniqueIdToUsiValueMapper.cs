@@ -32,23 +32,23 @@ namespace EdFi.Ods.Api.IdentityValueMappers
             _openStatelessSession = Preconditions.ThrowIfNull(openStatelessSession, nameof(openStatelessSession));
         }
 
-        public PersonIdentifiersValueMap GetUsi(string personType, string uniqueId)
+        public PersonIdentifierTuple GetUsi(string personType, string uniqueId)
         {
             Preconditions.ThrowIfNull(personType, nameof(personType));
 
             return GetPersonIdentifiersValueMap(personType, personType + "UniqueId", uniqueId)
-                      .FirstOrDefault() ?? new PersonIdentifiersValueMap();
+                      .FirstOrDefault() ?? new PersonIdentifierTuple();
         }
 
-        public PersonIdentifiersValueMap GetUniqueId(string personType, int usi)
+        public PersonIdentifierTuple GetUniqueId(string personType, int usi)
         {
             Preconditions.ThrowIfNull(personType, nameof(personType));
 
             return GetPersonIdentifiersValueMap(personType, personType + "USI", usi)
-                      .FirstOrDefault() ?? new PersonIdentifiersValueMap();
+                      .FirstOrDefault() ?? new PersonIdentifierTuple();
         }
 
-        private IEnumerable<PersonIdentifiersValueMap> GetPersonIdentifiersValueMap(
+        private IEnumerable<PersonIdentifierTuple> GetPersonIdentifiersValueMap(
             string personType,
             string searchField,
             object searchValue)
@@ -81,9 +81,9 @@ namespace EdFi.Ods.Api.IdentityValueMappers
                     criteria.Add(Expression.Eq($"{searchField}", searchValue));
                 }
 
-                criteria.SetResultTransformer(Transformers.AliasToBean<PersonIdentifiersValueMap>());
+                criteria.SetResultTransformer(Transformers.AliasToBean<PersonIdentifierTuple>());
 
-                return criteria.List<PersonIdentifiersValueMap>();
+                return criteria.List<PersonIdentifierTuple>();
             }
         }
     }

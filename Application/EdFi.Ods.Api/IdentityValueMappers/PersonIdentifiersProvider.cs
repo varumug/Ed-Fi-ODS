@@ -35,13 +35,13 @@ namespace EdFi.Ods.Api.IdentityValueMappers
         /// Gets the identifier values available for all members of the specified Person type as a streaming enumerable.
         /// </summary>
         /// <param name="personType">The type of person whose UniqueId is being requested (e.g. Student, Staff or Parent).</param>
-        /// <returns>An enumerable collection of <see cref="PersonIdentifiersValueMap"/> instances containing the available identifiers
+        /// <returns>An enumerable collection of <see cref="PersonIdentifierTuple"/> instances containing the available identifiers
         /// for UniqueId and the corresponding Id and/or USI values (depending on the implementation).</returns>
         /// <remarks>Consumers should read all the data immediately because implementations should "stream" the
         /// data back for efficiency reasons, holding on resources such as a database connection until reading is
         /// complete.
         /// </remarks>
-        public async Task<IEnumerable<PersonIdentifiersValueMap>> GetAllPersonIdentifiers(string personType)
+        public async Task<IList<PersonIdentifierTuple>> GetAllPersonIdentifiers(string personType)
         {
             Preconditions.ThrowIfNull(personType, nameof(personType));
 
@@ -67,9 +67,9 @@ namespace EdFi.Ods.Api.IdentityValueMappers
                             .Add(Projections.Alias(Projections.Property($"{personType}USI"), "Usi"))
                             .Add(Projections.Alias(Projections.Property($"{personType}UniqueId"), "UniqueId"))
                     )
-                    .SetResultTransformer(Transformers.AliasToBean<PersonIdentifiersValueMap>());
+                    .SetResultTransformer(Transformers.AliasToBean<PersonIdentifierTuple>());
 
-                return await criteria.ListAsync<PersonIdentifiersValueMap>();
+                return await criteria.ListAsync<PersonIdentifierTuple>();
             }
         }
     }

@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using EdFi.Ods.Common.Extensions;
 using EdFi.Ods.Common.Providers;
 using EdFi.Ods.Common.Specifications;
 using log4net;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace EdFi.Ods.Api.Caching
 {
@@ -32,7 +34,7 @@ namespace EdFi.Ods.Api.Caching
         private readonly ICacheProvider _cacheProvider;
         private readonly IEdFiOdsInstanceIdentificationProvider _edFiOdsInstanceIdentificationProvider;
 
-        private readonly ReaderWriterLockSlim _identityValueMapsLock = new ReaderWriterLockSlim();
+        private readonly object _identityValueMapsLock = new object();
 
         private readonly ILog _logger = LogManager.GetLogger(typeof(PersonUniqueIdToUsiCache));
         private readonly IPersonIdentifiersProvider _personIdentifiersProvider;
@@ -103,39 +105,34 @@ namespace EdFi.Ods.Api.Caching
         /// <returns>The UniqueId value assigned to the person if found; otherwise <b>null</b>.</returns>
         public string GetUniqueId(string personType, int usi)
         {
-            if (usi == default(int))
+            if (usi == default)
             {
-                return default(string);
+                return default;
             }
 
-            string context = GetUsiKeyTokenContext();
-
-            string key = GetUniqueIdByUsiCacheKey(personType, usi, context);
-
-            string uniqueId;
-
             // Get the cache first, initializing it if necessary
-            var uniqueIdByUsi = GetUniqueIdByUsiMap(personType, context);
+            string odsContext = GetOdsSpecificContext();
+            var uniqueIdByUsi = GetUniqueIdByUsiMap(personType, odsContext);
 
-            // Check the cache for the value
-            if (uniqueIdByUsi != null && uniqueIdByUsi.TryGetValue(key, out uniqueId))
+            // Check the dictionary for the value
+            if (uniqueIdByUsi != null && uniqueIdByUsi.TryGetValue(usi, out string cachedUniqueId))
             {
-                return uniqueId;
+                return cachedUniqueId;
             }
 
             // Call the value mapper for the individual value
-            var valueMap = GetUniqueIdValueMap(personType, usi);
+            var lookupUniqueId = LookupUniqueId(personType, usi);
 
-            // Save the value
-            if (valueMap.UniqueId != null && uniqueIdByUsi != null)
+            // Save the value (if found and we have somewhere to store it)
+            if (lookupUniqueId != null && uniqueIdByUsi != null)
             {
-                uniqueIdByUsi.TryAdd(key, valueMap.UniqueId);
+                uniqueIdByUsi.TryAdd(usi, lookupUniqueId);
 
-                GetUsiByUniqueIdMap(personType, context)
-                   .AddOrUpdate(GetUsiByUniqueIdCacheKey(personType, valueMap.UniqueId), usi, (x, y) => usi);
+                GetUsiByUniqueIdMap(personType, odsContext)
+                   .AddOrUpdate(lookupUniqueId, usi, (x, y) => usi);
             }
 
-            return valueMap.UniqueId;
+            return lookupUniqueId;
         }
 
         /// <summary>
@@ -154,24 +151,20 @@ namespace EdFi.Ods.Api.Caching
         /// <summary>
         /// Gets the ODS-specific integer identifier for the specified type of person and their UniqueId value.
         /// </summary>
-        /// <param name="personTypeName">The type of the person (e.g. Staff, Student, Parent).</param>
+        /// <param name="personType">The type of the person (e.g. Staff, Student, Parent).</param>
         /// <param name="uniqueId">The UniqueId value associated with the person.</param>
         /// <returns>The ODS-specific integer identifier for the specified type of representation of
         /// the person if found; otherwise <b>null</b>.</returns>
-        public int? GetUsiNullable(string personTypeName, string uniqueId)
+        public int? GetUsiNullable(string personType, string uniqueId)
         {
-            var usi = GetUsi(personTypeName, uniqueId, true);
+            var usi = GetUsi(personType, uniqueId, true);
 
-            return usi.HasValue && usi.Value == default(int)
-                ? null
-                : usi;
+            return usi is default(int) ? null : usi;
         }
 
-        private ConcurrentDictionary<string, string> GetUniqueIdByUsiMap(string personType, string context)
+        private ConcurrentDictionary<int, string> GetUniqueIdByUsiMap(string personType, string context)
         {
-            IdentityValueMaps identityValueMaps;
-
-            if (!TryGetIdentityValueMaps(personType, context, out identityValueMaps))
+            if (!TryGetIdentityValueMaps(personType, context, out IdentityValueMaps identityValueMaps))
             {
                 return null;
             }
@@ -181,9 +174,7 @@ namespace EdFi.Ods.Api.Caching
 
         private ConcurrentDictionary<string, int> GetUsiByUniqueIdMap(string personType, string context)
         {
-            IdentityValueMaps identityValueMaps;
-
-            if (!TryGetIdentityValueMaps(personType, context, out identityValueMaps))
+            if (!TryGetIdentityValueMaps(personType, context, out IdentityValueMaps identityValueMaps))
             {
                 return null;
             }
@@ -193,11 +184,9 @@ namespace EdFi.Ods.Api.Caching
 
         private bool TryGetIdentityValueMaps(string personType, string context, out IdentityValueMaps identityValueMaps)
         {
-            object personCacheAsObject;
-
             string cacheKey = GetPersonTypeIdentifiersCacheKey(personType, context);
 
-            if (!_cacheProvider.TryGetCachedObject(cacheKey, out personCacheAsObject))
+            if (!_cacheProvider.TryGetCachedObject(cacheKey, out object personCacheAsObject))
             {
                 // Make sure there is only one cache set being initialized at a time
                 lock (_identityValueMapsLock)
@@ -205,38 +194,45 @@ namespace EdFi.Ods.Api.Caching
                     // Make sure that the entry still doesn't exist yet
                     if (!_cacheProvider.TryGetCachedObject(cacheKey, out personCacheAsObject))
                     {
-                        var newValueMaps = new IdentityValueMaps();
+                        var identityCacheEntry = new IdentityCacheEntry();
 
-                        //Put the initialization task on the cached object so that we know the initialization status by cache entry key
-                        //Even if/when the cache provider storage changes context
-                        newValueMaps.InitializationTask = InitializePersonTypeValueMaps(newValueMaps, personType, context);
+                        // Put the initialization task on the cached object so that we know the initialization status by cache entry key
+                        // Even if/when the cache provider storage changes context
+                        identityCacheEntry.InitializationTask = InitializePersonTypeValueMaps(cacheKey, identityCacheEntry, personType);
 
-                        //Initial Insert is for while async initialization is running.
-                        _cacheProvider.Insert(cacheKey, newValueMaps, DateTime.MaxValue, TimeSpan.FromMinutes(5));
+                        if (_logger.IsDebugEnabled)
+                        {
+                            _logger.Debug($"Inserting USI/Unique identifiers cache entry for '{cacheKey}'.");
+                        }
+                        
+                        // Initial Insert is for while async initialization is running.
+                        _cacheProvider.Insert(cacheKey, identityCacheEntry, DateTime.MaxValue, TimeSpan.FromMinutes(5));
 
                         _cacheProvider.TryGetCachedObject(cacheKey, out personCacheAsObject);
                     }
                 }
             }
 
-            identityValueMaps = personCacheAsObject as IdentityValueMaps;
+            var personCacheEntry = personCacheAsObject as IdentityCacheEntry;
 
-            if (identityValueMaps == null)
+            if (personCacheEntry == null)
             {
+                identityValueMaps = null;
                 return false;
             }
 
             if (_synchronousInitialization
-                && (identityValueMaps.UniqueIdByUsi == null
-                    || identityValueMaps.UsiByUniqueId == null))
+                && (personCacheEntry.IdentityValueMaps.UniqueIdByUsi == null
+                    || personCacheEntry.IdentityValueMaps.UsiByUniqueId == null))
             {
                 // Wait for the initialization task to complete
-                identityValueMaps.InitializationTask.WaitSafely();
+                personCacheEntry.InitializationTask.ConfigureAwait(false).GetAwaiter().GetResult();
 
-                //If initialization failed, return false.
-                if (identityValueMaps.UniqueIdByUsi == null
-                    || identityValueMaps.UsiByUniqueId == null)
+                // If initialization failed, return false.
+                if (personCacheEntry.IdentityValueMaps?.UniqueIdByUsi == null
+                    || personCacheEntry.IdentityValueMaps?.UsiByUniqueId == null)
                 {
+                    identityValueMaps = null;
                     return false;
                 }
 
@@ -244,10 +240,11 @@ namespace EdFi.Ods.Api.Caching
                 return TryGetIdentityValueMaps(personType, context, out identityValueMaps);
             }
 
+            identityValueMaps = personCacheEntry.IdentityValueMaps;
             return true;
         }
 
-        private Task InitializePersonTypeValueMaps(IdentityValueMaps entry, string personType, string context)
+        private Task InitializePersonTypeValueMaps(string cacheKey, IdentityCacheEntry entry, string personType)
         {
             // Validate Person type
             if (!PersonEntitySpecification.IsPersonEntity(personType))
@@ -260,13 +257,13 @@ namespace EdFi.Ods.Api.Caching
             }
 
             // In web application scenarios, copy pertinent context from HttpContext to CallContext
-            if (HttpContextStorageTransfer != null)
-            {
-                HttpContextStorageTransfer.TransferContext();
-            }
+            HttpContextStorageTransfer?.TransferContext();
 
-            var task = InitializePersonTypeValueMapsAsync(entry, personType, context);
+            // TODO: GKM - Questions... Why is this not Task.Run ? The point is that it should be on a background thread and context transferred.
+            // But there is no context being transferred anymore. Why not?
+            var task = InitializePersonTypeValueMapsAsync(cacheKey, entry, personType);
 
+            // Looks like a total hack because we're not controlling the narrative around this definitively background work
             if (task.Status == TaskStatus.Created)
             {
                 task.Start();
@@ -275,15 +272,12 @@ namespace EdFi.Ods.Api.Caching
             return task;
         }
 
-        private async Task InitializePersonTypeValueMapsAsync(IdentityValueMaps entry, string personType, string context)
+        private async Task InitializePersonTypeValueMapsAsync(string cacheKey, IdentityCacheEntry entry, string personType)
         {
             // Un-handled exceptions here will take down the ASP.NET process
             try
             {
                 // Start building the data
-                var uniqueIdByUsi = new ConcurrentDictionary<string, string>();
-                var usiByUniqueId = new ConcurrentDictionary<string, int>();
-
                 Stopwatch stopwatch = null;
 
                 if (_logger.IsDebugEnabled)
@@ -292,14 +286,15 @@ namespace EdFi.Ods.Api.Caching
                     stopwatch.Start();
                 }
 
-                foreach (
-                    var valueMap in await _personIdentifiersProvider.GetAllPersonIdentifiers(personType))
-                {
-                    string key = GetUniqueIdByUsiCacheKey(personType, valueMap.Usi, context);
-                    uniqueIdByUsi.TryAdd(key, valueMap.UniqueId);
+                var personIdentifiers = await _personIdentifiersProvider.GetAllPersonIdentifiers(personType);
 
-                    string key2 = GetUsiByUniqueIdCacheKey(personType, valueMap.UniqueId, context);
-                    usiByUniqueId.TryAdd(key2, valueMap.Usi);
+                var uniqueIdByUsi = new ConcurrentDictionary<int, string>(Environment.ProcessorCount, personIdentifiers.Count);
+                var usiByUniqueId = new ConcurrentDictionary<string, int>(Environment.ProcessorCount, personIdentifiers.Count);
+
+                foreach (var valueMap in personIdentifiers)
+                {
+                    uniqueIdByUsi.TryAdd(valueMap.Usi, valueMap.UniqueId);
+                    usiByUniqueId.TryAdd(valueMap.UniqueId, valueMap.Usi);
                 }
 
                 if (_logger.IsDebugEnabled)
@@ -313,11 +308,13 @@ namespace EdFi.Ods.Api.Caching
                         stopwatch.ElapsedMilliseconds);
                 }
 
-                entry.SetMaps(usiByUniqueId, uniqueIdByUsi);
-                string cacheKey = GetPersonTypeIdentifiersCacheKey(personType, context);
+                entry.IdentityValueMaps = new IdentityValueMaps(uniqueIdByUsi, usiByUniqueId);
 
-                //Now that it's loaded extend the cache expiration.
+                // Now that it's loaded extend the cache expiration.
                 _cacheProvider.Insert(cacheKey, entry, GetAbsoluteExpiration(), _slidingExpiration);
+                
+                // Drop the reference to the initialization task
+                entry.InitializationTask = null;
             }
             catch (Exception ex)
             {
@@ -333,33 +330,27 @@ namespace EdFi.Ods.Api.Caching
 
         private static string GetPersonTypeIdentifiersCacheKey(string personType, string context)
         {
-            return CacheKeyPrefix + personType + "_" + context;
+            return string.Concat(CacheKeyPrefix, personType, "_", context);
         }
 
         private string GetUniqueIdByUsiCacheKey(string personType, int usi)
         {
-            return GetUniqueIdByUsiCacheKey(personType, usi, GetUsiKeyTokenContext());
+            return GetUniqueIdByUsiCacheKey(personType, usi, GetOdsSpecificContext());
         }
 
         private string GetUniqueIdByUsiCacheKey(string personType, int usi, string context)
         {
-            string key = string.Format(
-                "{0}_{1}_{2}",
-                personType,
-                usi,
-                context);
-
-            return key;
+            return string.Concat(personType, "_", usi, "_", context);
         }
 
-        private PersonIdentifiersValueMap GetUniqueIdValueMap(string personTypeName, int usi)
+        private string LookupUniqueId(string personTypeName, int usi)
         {
-            return _uniqueIdToUsiValueMapper.GetUniqueId(personTypeName, usi);
+            return _uniqueIdToUsiValueMapper.GetUniqueId(personTypeName, usi)?.UniqueId;
         }
 
-        private PersonIdentifiersValueMap GetUsiValueMap(string personTypeName, string uniqueId)
+        private int LookupUsi(string personTypeName, string uniqueId)
         {
-            return _uniqueIdToUsiValueMapper.GetUsi(personTypeName, uniqueId);
+            return _uniqueIdToUsiValueMapper.GetUsi(personTypeName, uniqueId)?.Usi ?? default;
         }
 
         private int? GetUsi(string personType, string uniqueId, bool isNullable)
@@ -371,135 +362,63 @@ namespace EdFi.Ods.Api.Caching
                     : default(int);
             }
 
-            string context = GetUsiKeyTokenContext();
-
-            string key = GetUsiByUniqueIdCacheKey(personType, uniqueId, context);
-
-            int usi;
-
             // Get the cache first, initializing it if necessary
+            string context = GetOdsSpecificContext();
             var usiByUniqueId = GetUsiByUniqueIdMap(personType, context);
 
             _logger.DebugFormat(
                 "For person type: {0}, there are {1} records cached.",
                 personType,
-                usiByUniqueId != null
-                    ? usiByUniqueId.Count
-                    : 0);
+                usiByUniqueId?.Count ?? 0);
 
             // Check the cache for the value
-            if (usiByUniqueId != null && usiByUniqueId.TryGetValue(key, out usi))
+            if (usiByUniqueId != null && usiByUniqueId.TryGetValue(uniqueId, out int cachedUsi))
             {
-                if (usi != default(int))
+                if (cachedUsi != default(int))
                 {
-                    return usi;
+                    return cachedUsi;
                 }
             }
 
-            var valueMap = GetUsiValueMap(personType, uniqueId);
+            int lookupUsi = LookupUsi(personType, uniqueId);
 
             // Save the value
-            if (usiByUniqueId != null && valueMap.Usi != default(int))
+            if (usiByUniqueId != null && lookupUsi != default(int))
             {
-                usiByUniqueId.TryAdd(key, valueMap.Usi);
+                usiByUniqueId.TryAdd(uniqueId, lookupUsi);
 
                 GetUniqueIdByUsiMap(personType, context)
-                   .AddOrUpdate(GetUniqueIdByUsiCacheKey(personType, valueMap.Usi), uniqueId, (x, y) => uniqueId);
+                   .AddOrUpdate(lookupUsi, uniqueId, (x, y) => uniqueId);
             }
 
-            //NOTE: This code is here for future use.
-            //// Handle opportunistic cache value assignment of alternate value
-            //if (valueMap.Id != default(Guid))
-            //{
-            //    var extraEntyKey = string.Format("{0}{1}_id_by_uniqueid_{2}", CacheKeyPrefix, personTypeName, uniqueId);
-
-            //    if (!_cacheProvider.TryGetCachedObject(extraEntyKey, out obj))
-            //        _cacheProvider.Insert(extraEntyKey, valueMap.Id, DateTime.MaxValue, _cacheItemPolicy.SlidingExpiration);
-            //}
-
-            return valueMap.Usi;
+            return lookupUsi;
+        }
+        
+        private string GetOdsSpecificContext()
+        {
+            return string.Concat("from_", _edFiOdsInstanceIdentificationProvider.GetInstanceIdentification());
         }
 
-        private string GetUsiByUniqueIdCacheKey(string personTypeName, string uniqueId)
+        private class IdentityCacheEntry
         {
-            return GetUsiByUniqueIdCacheKey(personTypeName, uniqueId, GetUsiKeyTokenContext());
-        }
-
-        private string GetUsiByUniqueIdCacheKey(string personTypeName, string uniqueId, string context)
-        {
-            return string.Format("{0}_usi_{1}_by_uniqueid_{2}", personTypeName, context, uniqueId);
-        }
-
-        private string GetUsiKeyTokenContext()
-        {
-            return string.Format((string) "from_{0}", (object) _edFiOdsInstanceIdentificationProvider.GetInstanceIdentification());
-        }
-
-        private class IdentityValueMaps
-        {
-            private readonly ReaderWriterLockSlim _mapLock = new ReaderWriterLockSlim();
-
-            private ConcurrentDictionary<string, string> _uniqueIdByUsi;
-
-            private ConcurrentDictionary<string, int> _usiByUniqueId;
-
-            public ConcurrentDictionary<string, string> UniqueIdByUsi
-            {
-                get
-                {
-                    if (_mapLock.TryEnterReadLock(0))
-                    {
-                        try
-                        {
-                            return _uniqueIdByUsi;
-                        }
-                        finally
-                        {
-                            _mapLock.ExitReadLock();
-                        }
-                    }
-
-                    return null;
-                }
-            }
-
-            public ConcurrentDictionary<string, int> UsiByUniqueId
-            {
-                get
-                {
-                    if (_mapLock.TryEnterReadLock(0))
-                    {
-                        try
-                        {
-                            return _usiByUniqueId;
-                        }
-                        finally
-                        {
-                            _mapLock.ExitReadLock();
-                        }
-                    }
-
-                    return null;
-                }
-            }
-
             public Task InitializationTask { get; set; }
 
-            public void SetMaps(
-                ConcurrentDictionary<string, int> usiByUniqueId,
-                ConcurrentDictionary<string, string> uniqueIdByUsi)
+            public IdentityValueMaps IdentityValueMaps { get; set; } = new IdentityValueMaps();
+        }
+        
+        private class IdentityValueMaps
+        {
+            public IdentityValueMaps() { }
+            
+            public IdentityValueMaps(ConcurrentDictionary<int, string> uniqueIdByUsi, ConcurrentDictionary<string, int> usiByUniqueId)
             {
-                try
-                {
-                    _mapLock.EnterWriteLock();
-                    _usiByUniqueId = usiByUniqueId;
-                    _uniqueIdByUsi = uniqueIdByUsi;
-                }
-                finally
-                {
-                    _mapLock.ExitWriteLock();
-                }
+                UniqueIdByUsi = uniqueIdByUsi;
+                UsiByUniqueId = usiByUniqueId;
             }
+            
+            public ConcurrentDictionary<int, string> UniqueIdByUsi { get; }
+
+            public ConcurrentDictionary<string, int> UsiByUniqueId { get; }
         }
     }
 }

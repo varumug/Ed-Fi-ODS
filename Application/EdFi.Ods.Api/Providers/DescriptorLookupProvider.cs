@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using EdFi.Ods.Api.Dtos;
+using EdFi.Ods.Common.Infrastructure;
 using EdFi.Ods.Common.Specifications;
 using log4net;
 using NHibernate;
@@ -45,7 +46,7 @@ namespace EdFi.Ods.Api.Providers
         {
             try
             {
-                using (var session = _sessionFactory.OpenSession())
+                using (var sessionScope = new SessionScope(_sessionFactory))
                 {
                     var queries = new List<IEnumerable<DescriptorEntry>>();
                     var descriptorNames = _descriptorFullNameByName.Value.Keys.ToArray();
@@ -56,7 +57,7 @@ namespace EdFi.Ods.Api.Providers
 
                         var descriptorIdColumnName = descriptorName + "Id";
 
-                        var query = session.CreateCriteria(typeName)
+                        var query = sessionScope.Session.CreateCriteria(typeName)
                                            .SetProjection(
                                                 Projections.ProjectionList()
                                                            .Add(Projections.Property(descriptorIdColumnName), "Id")
@@ -104,11 +105,11 @@ namespace EdFi.Ods.Api.Providers
                     throw new KeyNotFoundException($"descriptorName {descriptorName} is not a known descriptor entity name.");
                 }
 
-                using (var session = _sessionFactory.OpenSession())
+                using (var sessionScope = new SessionScope(_sessionFactory))
                 {
                     var descriptorIdColumnName = descriptorName + "Id";
 
-                    var criteria = session.CreateCriteria(descriptorFullName)
+                    var criteria = sessionScope.Session.CreateCriteria(descriptorFullName)
                                           .SetProjection(
                                                Projections.ProjectionList()
                                                           .Add(Projections.Property(descriptorIdColumnName), "Id")

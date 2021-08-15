@@ -25,12 +25,12 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
         : TestFixtureAsyncBase
     {
         // Supplied values
-        private List<PersonIdentifiersValueMap> _suppliedPersonIdentifiers;
+        private List<PersonIdentifierTuple> _suppliedPersonIdentifiers;
 
         // Actual values
-        private IEnumerable<PersonIdentifiersValueMap> _actualStudentIdentifiers;
-        private IEnumerable<PersonIdentifiersValueMap> _actualStaffIdentifiers;
-        private IEnumerable<PersonIdentifiersValueMap> _actualParentIdentifiers;
+        private IEnumerable<PersonIdentifierTuple> _actualStudentIdentifiers;
+        private IEnumerable<PersonIdentifierTuple> _actualStaffIdentifiers;
+        private IEnumerable<PersonIdentifierTuple> _actualParentIdentifiers;
 
         // External dependencies
         private IPersonIdentifiersProvider _personIdentifiersProvider;
@@ -39,16 +39,16 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
         {
             _personIdentifiersProvider = Stub<IPersonIdentifiersProvider>();
 
-            _suppliedPersonIdentifiers = new List<PersonIdentifiersValueMap>
+            _suppliedPersonIdentifiers = new List<PersonIdentifierTuple>
             {
-                new PersonIdentifiersValueMap
+                new PersonIdentifierTuple
                 {
                     UniqueId = Guid.NewGuid()
                         .ToString(),
                     Usi = 100,
                     Id = new Guid()
                 },
-                new PersonIdentifiersValueMap
+                new PersonIdentifierTuple
                 {
                     UniqueId = Guid.NewGuid()
                         .ToString(),
@@ -58,13 +58,13 @@ namespace EdFi.Ods.Tests.EdFi.Ods.Features.UniqueIdIntegration
             };
 
             A.CallTo(() => _personIdentifiersProvider.GetAllPersonIdentifiers("Student"))
-                .Returns(Task.FromResult((IEnumerable<PersonIdentifiersValueMap>) _suppliedPersonIdentifiers));
+                .Returns(Task.FromResult((IList<PersonIdentifierTuple>) _suppliedPersonIdentifiers));
 
             A.CallTo(() => _personIdentifiersProvider.GetAllPersonIdentifiers("Staff"))
-                .Returns(Task.FromResult((IEnumerable<PersonIdentifiersValueMap>) _suppliedPersonIdentifiers));
+                .Returns(Task.FromResult((IList<PersonIdentifierTuple>) _suppliedPersonIdentifiers));
 
             A.CallTo(() => _personIdentifiersProvider.GetAllPersonIdentifiers("Parent"))
-                .Returns(Task.FromResult((IEnumerable<PersonIdentifiersValueMap>) _suppliedPersonIdentifiers));
+                .Returns(Task.FromResult((IList<PersonIdentifierTuple>) _suppliedPersonIdentifiers));
 
             string validPersonTypes = string.Join("','", PersonEntitySpecification.ValidPersonTypes)
                 .SingleQuoted();

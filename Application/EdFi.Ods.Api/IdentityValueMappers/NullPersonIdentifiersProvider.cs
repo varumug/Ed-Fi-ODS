@@ -3,6 +3,7 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -19,11 +20,9 @@ namespace EdFi.Ods.Api.IdentityValueMappers
         /// </summary>
         /// <param name="personType">The type of person whose UniqueId is being requested (e.g. Student, Staff or Parent).</param>
         /// <returns>An empty enumerable.</returns>
-        public async Task<IEnumerable<PersonIdentifiersValueMap>> GetAllPersonIdentifiers(string personType)
+        public Task<IList<PersonIdentifierTuple>> GetAllPersonIdentifiers(string personType)
         {
-            return await Task.Run(
-                () => new PersonIdentifiersValueMap[]
-                      { });
+            return Task.FromResult((IList<PersonIdentifierTuple>) Array.Empty<PersonIdentifierTuple>());
         }
     }
 }

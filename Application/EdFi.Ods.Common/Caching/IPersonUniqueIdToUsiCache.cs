@@ -31,10 +31,10 @@ namespace EdFi.Ods.Common.Caching
         /// <summary>
         /// Gets the ODS-specific integer identifier for the specified type of person and their UniqueId value.
         /// </summary>
-        /// <param name="personTypeName">The type of the person (e.g. Staff, Student, Parent).</param>
+        /// <param name="personType">The type of the person (e.g. Staff, Student, Parent).</param>
         /// <param name="uniqueId">The UniqueId value associated with the person.</param>
         /// <returns>The ODS-specific integer identifier for the specified type of representation of 
         /// the person if found; otherwise <b>null</b>.</returns>
-        int? GetUsiNullable(string personTypeName, string uniqueId);
+        int? GetUsiNullable(string personType, string uniqueId);
     }
 }

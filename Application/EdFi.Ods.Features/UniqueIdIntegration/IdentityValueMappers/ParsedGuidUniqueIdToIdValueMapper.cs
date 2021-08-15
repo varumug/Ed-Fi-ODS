@@ -13,17 +13,17 @@ namespace EdFi.Ods.Features.UniqueIdIntegration.IdentityValueMappers
     /// </summary>
     public class ParsedGuidUniqueIdToIdValueMapper : IUniqueIdToIdValueMapper
     {
-        public PersonIdentifiersValueMap GetId(string personType, string uniqueId)
+        public PersonIdentifierTuple GetId(string personType, string uniqueId)
         {
-            return new PersonIdentifiersValueMap
+            return new PersonIdentifierTuple
                    {
                        Id = Guid.Parse(uniqueId), UniqueId = uniqueId
                    };
         }
 
-        public PersonIdentifiersValueMap GetUniqueId(string personType, Guid id)
+        public PersonIdentifierTuple GetUniqueId(string personType, Guid id)
         {
-            return new PersonIdentifiersValueMap
+            return new PersonIdentifierTuple
                    {
                        Id = id, UniqueId = id.ToString("N")
                    };
