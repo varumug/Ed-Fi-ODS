@@ -265,8 +265,7 @@ namespace EdFi.Ods.Api.Helpers
 
             if (resourceName == null)
             {
-                throw new Exception(
-                    $"Assembly metadata embedded resource '{AssemblyMetadataSearchString}' not found in assembly '{Path.GetFileName(assembly.Location)}'.");
+                throw new Exception($"Assembly metadata embedded resource '{AssemblyMetadataSearchString}' not found in assembly '{Path.GetFileName(assembly.Location)}'.");
             }
 
             var stream = assembly.GetManifestResourceStream(resourceName);
