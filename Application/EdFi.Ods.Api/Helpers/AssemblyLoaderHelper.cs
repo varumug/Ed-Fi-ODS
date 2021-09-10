@@ -288,7 +288,6 @@ namespace EdFi.Ods.Api.Helpers
         private class AssemblyMetadata
         {
             public string AssemblyModelType { get; set; }
-
             public string AssemblyMetadataFormatVersion { get; set; }
         }
     }
